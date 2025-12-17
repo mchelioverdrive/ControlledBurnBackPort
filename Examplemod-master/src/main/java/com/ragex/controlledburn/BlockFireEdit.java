@@ -26,12 +26,16 @@ public class BlockFireEdit extends BlockFire
         Block blockTo = null;
         int metaTo = 0;
 
-        for (Map.Entry<FireData.FireDataFilter, FireData.BlockWithMeta> entry : FireData.blockTransformationMap.entrySet())
+        for (Map.Entry<FireData.FireDataFilter, FireData.BlockMeta> entry : FireData.blockTransformationMap.entrySet())
         {
-            if (entry.getKey().matches(world, x, y, z, block, meta))
+            FireData.FireDataFilter filter = entry.getKey();
+            FireData.BlockMeta result = entry.getValue();
+
+            if (filter.matches(world, x, y, z, block, meta))
             {
-                blockTo = entry.getValue().block;
-                metaTo = entry.getValue().meta;
+                blockTo = result.block;   // access the public field directly
+                metaTo = result.meta;     // access the public field directly
+                break; // only the first matching entry is applied
             }
         }
 
@@ -43,6 +47,10 @@ public class BlockFireEdit extends BlockFire
 
         return false;
     }
+
+
+
+
 
     @Override
     public int tickRate(World world)
