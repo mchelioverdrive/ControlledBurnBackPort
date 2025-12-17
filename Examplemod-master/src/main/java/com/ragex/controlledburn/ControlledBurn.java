@@ -138,6 +138,7 @@ public class ControlledBurn
             System.out.println("ControlledBurn: oldFire=" + oldFire + " newFire=" + newFire);
             System.out.println("ControlledBurn: Blocks.fire now = " + Blocks.fire);
 
+
         } catch (Throwable t) {
             System.err.println("ControlledBurn: replaceVanillaFire failed");
             t.printStackTrace();

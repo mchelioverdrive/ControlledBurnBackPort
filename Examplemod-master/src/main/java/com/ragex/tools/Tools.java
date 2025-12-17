@@ -4,7 +4,7 @@ package com.ragex.tools;
 //import com.ragex.tools.datastructures.Pair;
 //import org.lwjgl.util.vector.Quaternion;
 import org.lwjgl.util.vector.Quaternion;
-import sun.misc.Cleaner;
+//import sun.misc.Cleaner;
 
 import java.io.*;
 import java.lang.reflect.Field;
@@ -212,17 +212,17 @@ public class Tools
        ByteBuffer / Unsafe
        ========================= */
 
-    public static void freeDirectByteBuffer(ByteBuffer buffer)
-    {
-        try
-        {
-            Field f = buffer.getClass().getDeclaredField("cleaner");
-            f.setAccessible(true);
-            Cleaner cleaner = (Cleaner) f.get(buffer);
-            if (cleaner != null) cleaner.clean();
-        }
-        catch (Exception ignored) {}
-    }
+    //public static void freeDirectByteBuffer(ByteBuffer buffer)
+    //{
+    //    try
+    //    {
+    //        Field f = buffer.getClass().getDeclaredField("cleaner");
+    //        f.setAccessible(true);
+    //        Cleaner cleaner = (Cleaner) f.get(buffer);
+    //        if (cleaner != null) cleaner.clean();
+    //    }
+    //    catch (Exception ignored) {}
+    //}
 
     public static ByteBuffer allocateNative(int bytes)
     {

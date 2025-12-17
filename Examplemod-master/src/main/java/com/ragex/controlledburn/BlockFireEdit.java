@@ -19,6 +19,8 @@ import static com.ragex.controlledburn.FireConfig.*;
 
 public class BlockFireEdit extends BlockFire
 {
+
+    private static boolean disabledBurnLogged = false;
     /* ---------------------------------- helpers ---------------------------------- */
 
     private static boolean tryBurnBlockSpecial(World world, int x, int y, int z, Block block, int meta)
@@ -112,15 +114,22 @@ public class BlockFireEdit extends BlockFire
         int humidMod = humid ? -50 : 0;
 
         /* burn adjacent */
-        if (globalMultipliers.burnSpeedMultiplier != 0)
-        {
+        /* burn adjacent — treat <= 0 as "disabled" (safer than != 0) */
+        if (globalMultipliers.burnSpeedMultiplier > 0.0) {
             tryBurnAdjacent(world, x, y - 1, z, 250 + humidMod, rand, age, ForgeDirection.UP);
             tryBurnAdjacent(world, x, y + 1, z, 250 + humidMod, rand, age, ForgeDirection.DOWN);
             tryBurnAdjacent(world, x + 1, y, z, 300 + humidMod, rand, age, ForgeDirection.WEST);
             tryBurnAdjacent(world, x - 1, y, z, 300 + humidMod, rand, age, ForgeDirection.EAST);
             tryBurnAdjacent(world, x, y, z + 1, 300 + humidMod, rand, age, ForgeDirection.NORTH);
             tryBurnAdjacent(world, x, y, z - 1, 300 + humidMod, rand, age, ForgeDirection.SOUTH);
+        } else {
+            // optional: debug first time only so log spam is avoided
+            if (!disabledBurnLogged) {
+                disabledBurnLogged = true;
+                System.out.println("BlockFireEdit: burnSpeedMultiplier <= 0 — destructive burning disabled.");
+            }
         }
+
 
         world.scheduleBlockUpdate(
                 x, y, z,
