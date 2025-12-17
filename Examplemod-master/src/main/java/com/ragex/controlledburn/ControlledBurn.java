@@ -4,12 +4,16 @@ import com.ragex.tools.ReflectionTool;
 import cpw.mods.fml.common.Mod;
 import cpw.mods.fml.common.Mod.EventHandler;
 import cpw.mods.fml.common.event.FMLPostInitializationEvent;
+import cpw.mods.fml.common.event.FMLPreInitializationEvent;
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockFire;
 import net.minecraft.init.Blocks;
 import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.common.config.Configuration;
 import net.minecraftforge.event.world.BlockEvent;
+
+import java.io.File;
 
 import static com.ragex.controlledburn.FireConfig.specialToggles;
 
@@ -53,6 +57,15 @@ public class ControlledBurn
     {
         return maxFireAge() - minFireAge();
     }
+
+    public static Configuration config;
+
+    @EventHandler
+    public void preInit(FMLPreInitializationEvent event) {
+        // initialize FireConfig using Forge's suggested config file
+        FireConfig.init(event.getSuggestedConfigurationFile());
+    }
+
 
     /* ------------------------------------------------------------------------- */
     /* Events                                                                     */

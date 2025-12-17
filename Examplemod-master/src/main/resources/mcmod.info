@@ -1,13 +1,13 @@
 [{
-  "modid": "examplemod",
-  "name": "Example Mod",
-  "description": "A Forge 1.7.10 mod by GlowingFederal.",
+  "modid": "ControlledBurn",
+  "name": "Controlled Burn",
+  "description": "A 1.7.10 backport of Controlled Burn",
   "version": "1.0.0",
   "mcversion": "1.7.10",
   "url": "https://github.com/GlowingFederal/ExampleMod",
   "updateUrl": "",
-  "authorList": ["GlowingFederal"],
-  "credits": "Made by GlowingFederal",
+  "authorList": ["RagexPrince683"],
+  "credits": "Laike-Endaril for the original Controlled Burn mod",
   "logoFile": "",
   "screenshots": [],
   "dependencies": []
