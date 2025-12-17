@@ -6,16 +6,18 @@ import net.minecraft.world.World;
 import net.minecraft.world.WorldServer;
 import net.minecraft.world.WorldType;
 import net.minecraft.world.chunk.Chunk;
+import net.minecraft.world.chunk.IChunkProvider;
 import net.minecraft.world.chunk.storage.ExtendedBlockStorage;
+import net.minecraft.world.gen.ChunkProviderServer;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.world.WorldEvent;
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import cpw.mods.fml.common.gameevent.TickEvent;
 import cpw.mods.fml.relauncher.Side;
 
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.util.*;
 
 public class BlockTick
 {
@@ -47,49 +49,91 @@ public class BlockTick
     /* --------------------------------------------------------------------- */
 
     @SubscribeEvent
-    public static void onWorldTick(TickEvent.WorldTickEvent event)
-    {
+    public static void onWorldTick(TickEvent.WorldTickEvent event) {
         if (event.side != Side.SERVER || event.phase != TickEvent.Phase.END) return;
+        if (!(event.world instanceof WorldServer)) return;
 
         WorldServer world = (WorldServer) event.world;
-        //if (world.getWorldInfo().getTerrainType() == WorldType.DEBUG_ALL_BLOCK_STATES) return;
 
-        int tickSpeed = world.getGameRules().getGameRuleIntValue("randomTickSpeed");
+        // 1.7.10: get game rule as string then parse (getGameRuleStringValue exists in 1.7.10)
+        String tickRule = world.getGameRules().getGameRuleStringValue("randomTickSpeed");
+        int tickSpeed = 3; // sane default
+        try {
+            tickSpeed = Integer.parseInt(tickRule);
+        } catch (NumberFormatException ignored) {}
+
         if (tickSpeed <= 0) return;
 
         world.theProfiler.startSection("FLib BlockTick");
 
-        List loadedChunks = world.getChunkProvider().loadedChunks;
-        for (Object obj : loadedChunks)
-        {
-            Chunk chunk = (Chunk) obj;
+        IChunkProvider provider = world.getChunkProvider();
+        if (provider instanceof ChunkProviderServer) {
+            ChunkProviderServer cps = (ChunkProviderServer) provider;
 
-            ExtendedBlockStorage[] storageArray = chunk.getBlockStorageArray();
-            for (ExtendedBlockStorage storage : storageArray)
-            {
-                if (storage == null || !storage.getNeedsRandomTick()) continue;
+            List<?> loadedChunks = null;
 
-                for (int i = 0; i < tickSpeed; i++)
-                {
-                    int r = Tools.random(Integer.MAX_VALUE);
-                    int x = r & 15;
-                    int z = (r >> 8) & 15;
-                    int y = (r >> 16) & 15;
+            // Try direct field access first (common in many 1.7.10 mappings)
+            try {
+                Field f = ChunkProviderServer.class.getDeclaredField("loadedChunks");
+                f.setAccessible(true);
+                Object val = f.get(cps);
+                if (val instanceof List) {
+                    loadedChunks = (List<?>) val;
+                }
+            } catch (Throwable t) {
+                // ignore and try other fallbacks
+            }
 
-                    int worldX = (chunk.xPosition << 4) + x;
-                    int worldY = storage.getYLocation() + y;
-                    int worldZ = (chunk.zPosition << 4) + z;
+            // Fallback: id2ChunkMap (some mappings / versions expose a map of chunks)
+            if (loadedChunks == null) {
+                try {
+                    Field f = ChunkProviderServer.class.getDeclaredField("id2ChunkMap");
+                    f.setAccessible(true);
+                    Object mapObj = f.get(cps);
+                    if (mapObj instanceof Map) {
+                        loadedChunks = new ArrayList<>(((Map<?, ?>) mapObj).values());
+                    } else if (mapObj != null) {
+                        // handle fastutil Long2ObjectMap or similar via reflection
+                        Method valuesMethod = mapObj.getClass().getMethod("values");
+                        Object values = valuesMethod.invoke(mapObj);
+                        if (values instanceof Collection) {
+                            loadedChunks = new ArrayList<>((Collection<?>) values);
+                        }
+                    }
+                } catch (Throwable t) {
+                    loadedChunks = Collections.emptyList();
+                }
+            }
 
-                    Block block = storage.getBlockByExtId(x, y, z);
-                    if (block == null) continue;
+            for (Object obj : loadedChunks) {
+                if (!(obj instanceof Chunk)) continue;
+                Chunk chunk = (Chunk) obj;
 
-                    int meta = storage.getExtBlockMetadata(x, y, z);
+                ExtendedBlockStorage[] storageArray = chunk.getBlockStorageArray();
+                if (storageArray == null) continue;
 
-                    BlockTickData data = new BlockTickData(world, worldX, worldY, worldZ, block, meta);
+                for (ExtendedBlockStorage storage : storageArray) {
+                    if (storage == null || !storage.getNeedsRandomTick()) continue;
 
-                    for (IBlockTickAction action : actions)
-                    {
-                        action.run(data);
+                    for (int i = 0; i < tickSpeed; i++) {
+                        int r = Tools.random(Integer.MAX_VALUE); // your existing Tools.random
+                        int x = r & 15;
+                        int z = (r >> 8) & 15;
+                        int y = (r >> 16) & 15;
+
+                        int worldX = (chunk.xPosition << 4) + x;
+                        int worldY = storage.getYLocation() + y;
+                        int worldZ = (chunk.zPosition << 4) + z;
+
+                        Block block = storage.getBlockByExtId(x, y, z);
+                        if (block == null) continue;
+
+                        int meta = storage.getExtBlockMetadata(x, y, z);
+
+                        BlockTickData data = new BlockTickData(world, worldX, worldY, worldZ, block, meta);
+                        for (IBlockTickAction action : actions) {
+                            action.run(data);
+                        }
                     }
                 }
             }
