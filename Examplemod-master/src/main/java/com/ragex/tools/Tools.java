@@ -1,7 +1,9 @@
 package com.ragex.tools;
 
-import com.ragex.lwjgl.Quaternion;
+//import com.ragex.tools.lwjgl.Quaternion;
 //import com.ragex.tools.datastructures.Pair;
+//import org.lwjgl.util.vector.Quaternion;
+import org.lwjgl.util.vector.Quaternion;
 import sun.misc.Cleaner;
 
 import java.io.*;
@@ -68,126 +70,114 @@ public class Tools
         return base.endsWith(".0") ? i + "x10^-" + n : base + "x10^-" + n;
     }
 
-    public static Quaternion rotatedQuaternion(Quaternion v, Quaternion axis, double theta)
-    {
-        return rotatedQuaternion(v, axis, theta, TrigLookupTable.TRIG_TABLE_1048576);
-    }
+    /**
+     * Rotates a quaternion `v` around an axis by `theta` radians.
+     * Fully LWJGL-native, no custom helpers.
+     */
+    public static Quaternion rotatedQuaternion(Quaternion v, Quaternion axis, double theta) {
+        float halfSin = (float) Math.sin(theta * 0.5);
+        float halfCos = (float) Math.cos(theta * 0.5);
 
-    public static Quaternion rotatedQuaternion(Quaternion v, Quaternion axis, double theta, TrigLookupTable trig)
-    {
-        double sin = trig.sin(theta * 0.5);
-        double cos = trig.cos(theta * 0.5);
-
+        // Create rotation quaternion
         Quaternion q = new Quaternion(
-                (float) (sin * axis.x),
-                (float) (sin * axis.y),
-                (float) (sin * axis.z),
-                (float) cos
+                halfSin * axis.x,
+                halfSin * axis.y,
+                halfSin * axis.z,
+                halfCos
         );
 
+        // Conjugate of the rotation quaternion
         Quaternion qc = new Quaternion(
-                (float) -(sin * axis.x),
-                (float) -(sin * axis.y),
-                (float) -(sin * axis.z),
-                (float) cos
+                -q.x,
+                -q.y,
+                -q.z,
+                q.w
         );
 
-        return Quaternion.mul(Quaternion.mul(q, v, null), qc, null);
+        // v' = q * v * q_conjugate
+        Quaternion temp = Quaternion.mul(q, v, null);
+        return Quaternion.mul(temp, qc, null);
     }
 
     /* =========================
        Expression Parser
        ========================= */
 
-    public static double calc(final String str)
-    {
-        return new Object()
-        {
+    public static double calc(final String str) {
+        return new Object() {
             int pos = -1, ch;
 
-            void nextChar()
-            {
+            void nextChar() {
                 ch = (++pos < str.length()) ? str.charAt(pos) : -1;
             }
 
-            boolean eat(int c)
-            {
+            boolean eat(int c) {
                 while (ch == ' ') nextChar();
-                if (ch == c)
-                {
+                if (ch == c) {
                     nextChar();
                     return true;
                 }
                 return false;
             }
 
-            double parse()
-            {
+            double parse() {
                 nextChar();
                 double x = parseExpression();
                 if (pos < str.length()) throw new RuntimeException("Unexpected: " + (char) ch);
                 return x;
             }
 
-            double parseExpression()
-            {
+            double parseExpression() {
                 double x = parseTerm();
-                for (;;)
-                {
+                for (;;) {
                     if (eat('+')) x += parseTerm();
                     else if (eat('-')) x -= parseTerm();
                     else return x;
                 }
             }
 
-            double parseTerm()
-            {
+            double parseTerm() {
                 double x = parseFactor();
-                for (;;)
-                {
+                for (;;) {
                     if (eat('*')) x *= parseFactor();
                     else if (eat('/')) x /= parseFactor();
                     else return x;
                 }
             }
 
-            double parseFactor()
-            {
+            double parseFactor() {
                 if (eat('+')) return parseFactor();
                 if (eat('-')) return -parseFactor();
 
                 double x;
                 int start = pos;
 
-                if (eat('('))
-                {
+                if (eat('(')) {
                     x = parseExpression();
                     eat(')');
-                }
-                else if ((ch >= '0' && ch <= '9') || ch == '.')
-                {
+                } else if ((ch >= '0' && ch <= '9') || ch == '.') {
                     while ((ch >= '0' && ch <= '9') || ch == '.') nextChar();
                     x = Double.parseDouble(str.substring(start, pos));
-                }
-                else if (ch >= 'a' && ch <= 'z')
-                {
+                } else if (ch >= 'a' && ch <= 'z') {
                     while (ch >= 'a' && ch <= 'z') nextChar();
                     String func = str.substring(start, pos);
                     x = parseFactor();
 
                     if ("sqrt".equals(func)) x = Math.sqrt(x);
-                    else if ("sin".equals(func)) x = TrigLookupTable.TRIG_TABLE_1048576.sin(degtorad(x));
-                    else if ("cos".equals(func)) x = TrigLookupTable.TRIG_TABLE_1048576.cos(degtorad(x));
-                    else if ("tan".equals(func)) x = TrigLookupTable.TRIG_TABLE_1048576.tan(degtorad(x));
+                    else if ("sin".equals(func)) x = Math.sin(Math.toRadians(x));
+                    else if ("cos".equals(func)) x = Math.cos(Math.toRadians(x));
+                    else if ("tan".equals(func)) x = Math.tan(Math.toRadians(x));
                     else throw new RuntimeException("Unknown function: " + func);
+                } else {
+                    throw new RuntimeException("Unexpected: " + (char) ch);
                 }
-                else throw new RuntimeException("Unexpected: " + (char) ch);
 
                 if (eat('^')) x = Math.pow(x, parseFactor());
                 return x;
             }
         }.parse();
     }
+
 
     /* =========================
        Random helpers (1.7-safe)
