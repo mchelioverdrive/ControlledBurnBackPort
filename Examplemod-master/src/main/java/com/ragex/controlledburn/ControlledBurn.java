@@ -58,16 +58,16 @@ public class ControlledBurn
     /* Events                                                                     */
     /* ------------------------------------------------------------------------- */
 
-    @SubscribeEvent
-    public void fluidPlacingBlock(BlockEvent.FluidPlaceBlockEvent event)
-    {
-        if (specialToggles.noLavaFire &&
-                event.newBlock instanceof BlockFireEdit)
-        {
-            event.newBlock = event.block;
-            event.newMetadata = event.blockMetadata;
-        }
-    }
+    //@SubscribeEvent
+    //public void fluidPlacingBlock(BlockEvent.FluidPlaceBlockEvent event)
+    //{
+    //    if (specialToggles.noLavaFire &&
+    //            event.newBlock instanceof BlockFireEdit)
+    //    {
+    //        event.newBlock = event.block;
+    //        event.newMetadata = event.blockMetadata;
+    //    }
+    //}
 
     /* ------------------------------------------------------------------------- */
     /* Init                                                                       */

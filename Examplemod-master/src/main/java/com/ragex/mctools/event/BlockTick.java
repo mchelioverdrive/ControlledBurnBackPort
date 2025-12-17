@@ -52,7 +52,7 @@ public class BlockTick
         if (event.side != Side.SERVER || event.phase != TickEvent.Phase.END) return;
 
         WorldServer world = (WorldServer) event.world;
-        if (world.getWorldInfo().getTerrainType() == WorldType.DEBUG_ALL_BLOCK_STATES) return;
+        //if (world.getWorldInfo().getTerrainType() == WorldType.DEBUG_ALL_BLOCK_STATES) return;
 
         int tickSpeed = world.getGameRules().getGameRuleIntValue("randomTickSpeed");
         if (tickSpeed <= 0) return;

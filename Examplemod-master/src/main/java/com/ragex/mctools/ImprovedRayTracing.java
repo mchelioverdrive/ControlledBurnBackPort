@@ -184,7 +184,8 @@ public class ImprovedRayTracing
             if (lastWarning == -1 || System.currentTimeMillis() - lastWarning > 300000)
             {
                 System.err.println("WARNING: Raytrace exceeded iteration limit!");
-                Tools.printStackTrace();
+                //Tools.printStackTrace();
+                //todo if its important but whatever
                 lastWarning = System.currentTimeMillis();
             }
             else errorCount++;
