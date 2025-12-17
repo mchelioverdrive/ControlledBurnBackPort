@@ -14,6 +14,8 @@ import net.minecraftforge.common.config.Configuration;
 import net.minecraftforge.event.world.BlockEvent;
 
 import java.io.File;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 
 import static com.ragex.controlledburn.FireConfig.specialToggles;
 
@@ -99,17 +101,16 @@ public class ControlledBurn
     /* Fire replacement                                                           */
     /* ------------------------------------------------------------------------- */
 
-    private static void replaceVanillaFire()
-    {
+    private static void replaceVanillaFire() {
         try {
+            // 1) old & new block refs
             BlockFire oldFire = (BlockFire) Blocks.fire;
-
             BlockFireEdit newFire = (BlockFireEdit) new BlockFireEdit()
                     .setHardness(0.0F)
                     .setLightLevel(1.0F)
                     .setBlockName("fire");
 
-            // 1) replace the static field in Blocks.class (your ReflectionTool)
+            // 2) replace Blocks.fire static
             ReflectionTool.set(
                     Blocks.class,
                     new String[]{"field_150480_ab", "fire"},
@@ -117,22 +118,65 @@ public class ControlledBurn
                     newFire
             );
 
-            // 2) replace blocksList entry so getBlockById(...) returns newFire
+            // 3) get the registry and id/key for the old fire
+            Object registry = Block.blockRegistry; // RegistryNamespaced
+            int fireId = Block.getIdFromBlock(oldFire);
+
+            // getNameForObject should exist; return type is typically String in 1.7.10
+            Method getNameForObject = registry.getClass().getMethod("getNameForObject", Object.class);
+            Object registryKey = getNameForObject.invoke(registry);
+
+            // 4) try to call the registration method that exists in this MC/Forge: addObject(...) (1.7.10)
+            boolean replacedInRegistry = false;
             try {
-                int id = Block.getIdFromBlock(oldFire);
-                if (Block.blocksList != null && id >= 0 && id < Block.blocksList.length) {
-                    Block.blocksList[id] = newFire;
+                // try common 1.7.10 signature: addObject(int, String, Object)
+                Method addObject = registry.getClass().getMethod("addObject", int.class, String.class, Object.class);
+                addObject.setAccessible(true);
+                addObject.invoke(registry, fireId, registryKey.toString(), newFire);
+                replacedInRegistry = true;
+            } catch (NoSuchMethodException nsme) {
+                // some mappings/versions may have 'register(int, K, V)' instead — try that
+                try {
+                    Method register = registry.getClass().getMethod("register", int.class, registryKey.getClass(), Object.class);
+                    register.setAccessible(true);
+                    register.invoke(registry, fireId, registryKey, newFire);
+                    replacedInRegistry = true;
+                } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException ignore) {
+                    // fall through to the generic-search attempt below
                 }
-            } catch (Throwable t) {
-                System.err.println("ControlledBurn: failed to update Block.blocksList: " + t);
-                t.printStackTrace();
             }
 
-            // 3) copy vanilla fire stats from oldFire -> newFire
-            for (Object o : Block.blockRegistry) {
-                Block b = (Block) o;
+            // 4b) fallback: search for any 3-arg method with first parameter int and try to invoke it
+            if (!replacedInRegistry) {
+                for (Method m : registry.getClass().getMethods()) {
+                    if (m.getParameterTypes().length == 3 && m.getParameterTypes()[0] == int.class) {
+                        String name = m.getName().toLowerCase();
+                        if (name.contains("add") || name.contains("reg")) {
+                            try {
+                                m.setAccessible(true);
+                                // try to pass registryKey (if a String is required, use toString())
+                                Object keyArg = (m.getParameterTypes()[1] == String.class) ? registryKey.toString() : registryKey;
+                                m.invoke(registry, fireId, keyArg, newFire);
+                                replacedInRegistry = true;
+                                break;
+                            } catch (IllegalAccessException | InvocationTargetException ignored) { }
+                        }
+                    }
+                }
+            }
+
+            if (!replacedInRegistry) {
+                System.err.println("ControlledBurn: couldn't find registry add/register method via reflection. Registry replacement may fail.");
+            }
+
+            // 5) copy vanilla fire stats (iterate registry using iterator())
+            // RegistryNamespaced implements Iterable<V> so iterator() is available in 1.7.10
+            java.util.Iterator it = (java.util.Iterator) registry.getClass().getMethod("iterator").invoke(registry);
+            while (it.hasNext()) {
+                Block b = (Block) it.next();
                 if (b != Blocks.air && oldFire.getEncouragement(b) > 0) {
-                    Blocks.fire.setFireInfo(
+                    // use newFire.setFireInfo to copy encouragement/flamability
+                    newFire.setFireInfo(
                             b,
                             oldFire.getEncouragement(b),
                             oldFire.getFlammability(b)
@@ -140,14 +184,17 @@ public class ControlledBurn
                 }
             }
 
-            // 4) sanity log (very useful)
+            // 6) sanity log
             System.out.println("ControlledBurn: replaced Blocks.fire; Blocks.fire=" + Blocks.fire +
-                    " oldFire=" + oldFire + " id=" + Block.getIdFromBlock(oldFire));
+                    " oldFire=" + oldFire + " id=" + fireId + " key=" + registryKey);
 
         } catch (Throwable t) {
             System.err.println("ControlledBurn: replaceVanillaFire failed");
             t.printStackTrace();
         }
     }
+
+
+
 
 }
