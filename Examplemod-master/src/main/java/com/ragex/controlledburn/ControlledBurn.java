@@ -64,6 +64,7 @@ public class ControlledBurn
     public void preInit(FMLPreInitializationEvent event) {
         // initialize FireConfig using Forge's suggested config file
         FireConfig.init(event.getSuggestedConfigurationFile());
+        replaceVanillaFire();
     }
 
 
@@ -90,7 +91,7 @@ public class ControlledBurn
     @EventHandler
     public void postInit(FMLPostInitializationEvent event)
     {
-        replaceVanillaFire();
+        //replaceVanillaFire();
         FireData.update();
     }
 
@@ -100,33 +101,53 @@ public class ControlledBurn
 
     private static void replaceVanillaFire()
     {
-        BlockFireEdit newFire =
-                (BlockFireEdit) new BlockFireEdit()
-                        .setHardness(0.0F)
-                        .setLightLevel(1.0F)
-                        .setBlockName("fire");
+        try {
+            BlockFire oldFire = (BlockFire) Blocks.fire;
 
-        /* Replace Blocks.fire */
-        ReflectionTool.set(
-                Blocks.class,
-                new String[]{"field_150480_ab", "fire"},
-                null,
-                newFire
-        );
+            BlockFireEdit newFire = (BlockFireEdit) new BlockFireEdit()
+                    .setHardness(0.0F)
+                    .setLightLevel(1.0F)
+                    .setBlockName("fire");
 
-        /* Copy vanilla fire stats */
-        for (Object o : Block.blockRegistry)
-        {
-            Block b = (Block) o;
+            // 1) replace the static field in Blocks.class (your ReflectionTool)
+            ReflectionTool.set(
+                    Blocks.class,
+                    new String[]{"field_150480_ab", "fire"},
+                    null,
+                    newFire
+            );
 
-            if (b != Blocks.air && OLD_FIRE.getEncouragement(b) > 0)
-            {
-                Blocks.fire.setFireInfo(
-                        b,
-                        OLD_FIRE.getEncouragement(b),
-                        OLD_FIRE.getFlammability(b)
-                );
+            // 2) replace blocksList entry so getBlockById(...) returns newFire
+            try {
+                int id = Block.getIdFromBlock(oldFire);
+                if (Block.blocksList != null && id >= 0 && id < Block.blocksList.length) {
+                    Block.blocksList[id] = newFire;
+                }
+            } catch (Throwable t) {
+                System.err.println("ControlledBurn: failed to update Block.blocksList: " + t);
+                t.printStackTrace();
             }
+
+            // 3) copy vanilla fire stats from oldFire -> newFire
+            for (Object o : Block.blockRegistry) {
+                Block b = (Block) o;
+                if (b != Blocks.air && oldFire.getEncouragement(b) > 0) {
+                    Blocks.fire.setFireInfo(
+                            b,
+                            oldFire.getEncouragement(b),
+                            oldFire.getFlammability(b)
+                    );
+                }
+            }
+
+            // 4) sanity log (very useful)
+            System.out.println("ControlledBurn: replaced Blocks.fire; Blocks.fire=" + Blocks.fire +
+                    " oldFire=" + oldFire + " id=" + Block.getIdFromBlock(oldFire));
+
+        } catch (Throwable t) {
+            System.err.println("ControlledBurn: replaceVanillaFire failed");
+            t.printStackTrace();
         }
     }
+
 }
