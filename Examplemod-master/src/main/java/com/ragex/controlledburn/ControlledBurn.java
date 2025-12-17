@@ -16,8 +16,8 @@ import static com.ragex.controlledburn.FireConfig.specialToggles;
 @Mod(
         modid = ControlledBurn.MODID,
         name = ControlledBurn.NAME,
-        version = ControlledBurn.VERSION,
-        dependencies = "required-after:fantasticlib"
+        version = ControlledBurn.VERSION
+        //dependencies = "required-after:fantasticlib"
         //pain
 )
 public class ControlledBurn
@@ -68,6 +68,7 @@ public class ControlledBurn
     //        event.newMetadata = event.blockMetadata;
     //    }
     //}
+    //todo the thing
 
     /* ------------------------------------------------------------------------- */
     /* Init                                                                       */
