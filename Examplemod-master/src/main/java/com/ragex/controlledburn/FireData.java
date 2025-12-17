@@ -105,14 +105,14 @@ public class FireData
                 }
                 catch (NumberFormatException e)
                 {
-                    biome = (BiomeGenBase) BiomeGenBase.biomeRegistry.getObject(token);
-                    if (biome != null) filter.biomes.add(biome);
-                    else
-                    {
-                        System.err.println("Bad dimension or biome: " + token);
-                        good = false;
-                        break;
-                    }
+                    //biome = (BiomeGenBase) BiomeGenBase.biomeRegistry.getObject(token);
+                    //if (biome != null) filter.biomes.add(biome);
+                    //else
+                    //{
+                    //    System.err.println("Bad dimension or biome: " + token);
+                    //    good = false;
+                    //    break;
+                    //}
                 }
             }
             if (!good) continue;
@@ -152,14 +152,15 @@ public class FireData
                 }
                 catch (NumberFormatException e)
                 {
-                    biome = (BiomeGenBase) BiomeGenBase.biomeRegistry.getObject(token);
-                    if (biome != null) filter.biomes.add(biome);
-                    else
-                    {
-                        System.err.println("Bad dimension or biome: " + token);
-                        good = false;
-                        break;
-                    }
+                    //biomegenbase is not present in 1.7.10 forge
+                    //biome = (BiomeGenBase) BiomeGenBase.biomeRegistry.getObject(token);
+                    //if (biome != null) filter.biomes.add(biome);
+                    //else
+                    //{
+                    //    System.err.println("Bad dimension or biome: " + token);
+                    //    good = false;
+                    //    break;
+                    //}
                 }
             }
             if (!good) continue;
@@ -193,14 +194,14 @@ public class FireData
                 }
                 catch (NumberFormatException e)
                 {
-                    biome = (BiomeGenBase) BiomeGenBase.biomeRegistry.getObject(token);
-                    if (biome != null) filter.biomes.add(biome);
-                    else
-                    {
-                        System.err.println("Bad dimension or biome: " + token);
-                        good = false;
-                        break;
-                    }
+                    //biome = (BiomeGenBase) BiomeGenBase.biomeRegistry.getObject(token);
+                    //if (biome != null) filter.biomes.add(biome);
+                    //else
+                    //{
+                    //    System.err.println("Bad dimension or biome: " + token);
+                    //    good = false;
+                    //    break;
+                    //}
                 }
             }
             if (!good) continue;
